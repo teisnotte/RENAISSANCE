@@ -110,7 +110,10 @@ class KineticModel(object):
             parameters.update(comp_params)
 
         for key,value in value_dict.items():
-            parameters[str(key)].value = value
+                parameters[str(key)].value = value
+            # Put warning in logger
+            # else:
+            #     self.logger
 
     @property
     def moieties(self):
@@ -131,19 +134,39 @@ class KineticModel(object):
         :type reaction: skimpy.core.Reaction
         :return:
         """
-        # If the variable name already exists substitute
-        # with the variable
+        # If the variable name already exists substitute the reactant
+        # with the pre-existing variable
         for k,v in reaction.reactants.items():
             if v.name in self.reactants.keys():
 
                 # TODO substitute by itemsetter in reactions.reactants
-                # UGLYYYYYYY
+                # Possible reactant types for the reaction.reactant, all handled by the if/elif/else conditions in order
+                # 1. Small molecule  2. Simple activator 3. Simple inhibitor 4. Competitive inhibitor 5. Normal reactant
+                # This way, the inhibitors/activators don't get added to reaction.mechanism.reactants and are correctly
+                # linked
                 if k.startswith('small_molecule'):
                     for this_mod in reaction.modifiers.values():
-                        if this_mod.reactants['small_molecule'].name \
-                           is v.name:
+                        if 'small_molecule' in this_mod.reactants.keys():
+                            if this_mod.reactants['small_molecule'].name \
+                               is v.name:
 
-                           this_mod.reactants['small_molecule'] = self.reactants[v.name]
+                               this_mod.reactants['small_molecule'] = self.reactants[v.name]
+                elif k.startswith('activator_'):
+                    for this_mod in reaction.modifiers.values():
+                        if 'activator' in this_mod.reactants.keys():
+                            if this_mod.reactants['activator'].name \
+                                    is v.name:
+                                this_mod.reactants['activator'] = self.reactants[v.name]
+                elif k.startswith('inhibitor_'):
+                    for this_mod in reaction.modifiers.values():
+                        if 'inhibitor' in this_mod.reactants.keys():
+                            if this_mod.reactants['inhibitor'].name \
+                                    is v.name:
+                                this_mod.reactants['inhibitor'] = self.reactants[v.name]
+                elif k.startswith('inhibitor'):
+                    for this_inh_name, this_inh in reaction.mechanism.inhibitors.items():
+                        if this_inh.name is v.name:
+                            reaction.mechanism.inhibitors[this_inh_name] = self.reactants[v.name]
                 else:
                     reaction.mechanism.reactants[k] = self.reactants[v.name]
 
@@ -210,7 +233,7 @@ class KineticModel(object):
     def repair(self):
 
         """
-        Link inhibitors to reactants
+        Link inhibitors and activators to reactants
         FIXME: Any idea to avoid this is dearly welcome
         :return:
         """
@@ -221,6 +244,10 @@ class KineticModel(object):
                     if this_inhibitor.name in self.reactants:
                         this_mechanism.inhibitors[this_keys] = self.reactants[this_inhibitor.name]
 
+            for this_modifier in this_reaction.modifiers.values():
+                for this_keys, this_modifier_reactant in this_modifier.reactants.items():
+                    if this_modifier_reactant.name in self.reactants:
+                        this_modifier.reactants[this_keys] = self.reactants[this_modifier_reactant.name]
 
 
     @property

@@ -70,13 +70,19 @@ def make_rev_massaction(stoichiometry):
         for s in stoichiometry:
             if s < 0:
                 substrate = 'substrate{}'.format(num_substrates)
+                km_substrate ='km_substrate{}'.format(num_substrates)
                 reactant_list.append(substrate)
+                parameter_list[km_substrate] = [ODE, MCA, QSSA]
+                parameter_reactant_links[km_substrate] = substrate
                 reactant_stoichiometry[substrate] = float(s)
                 num_substrates += 1
 
             if s > 0:
                 product = 'product{}'.format(num_products)
+                km_product ='km_product{}'.format(num_products)
                 reactant_list.append(product)
+                parameter_list[km_product] = [ODE, MCA, QSSA]
+                parameter_reactant_links[km_product] = product
                 reactant_stoichiometry[product] = float(s)
                 num_products += 1
 

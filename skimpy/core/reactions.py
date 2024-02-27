@@ -98,8 +98,10 @@ class Reaction(object):
                              if r.type == PARAMETER))
 
         for this_modifier in self.modifiers.values():
-            this_params = TabDict( (k, r) for k, r in this_modifier.parameters.items()
+            # TODO CHECK IF THIS IS A GOOD IDEA
+            this_params = TabDict( ( str(r.symbol), r) for k, r in this_modifier.parameters.items()
                                           if r.type == PARAMETER)
+
             this_params.update(TabDict((k, r) for k, r in this_modifier.reactants.items()
                                               if r.type == PARAMETER))
             parameters.update(this_params)
@@ -107,8 +109,11 @@ class Reaction(object):
 
     @parameters.setter
     def parameters(self, value):
-        for name, p in value.items():
-            p.suffix = self.name
+        # Exception for expression based mechanisms
+        if not 'ExpressionBasedKinetics' in self.mechanism.__class__.__name__:
+            for name, p in value.items():
+                p.suffix = self.name
+
         self.mechanism.parameters = value
 
     @property

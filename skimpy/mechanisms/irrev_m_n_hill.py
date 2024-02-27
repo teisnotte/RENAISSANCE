@@ -25,42 +25,45 @@ limitations under the License.
 
 """
 
+import sympy
 
 from sympy import sympify
-
 from .mechanism import KineticMechanism,ElementrayReactionStep
 from ..core.reactions import Reaction
 from ..utils.tabdict import TabDict
 from collections import namedtuple
 from ..core.itemsets import make_parameter_set, make_reactant_set
-from skimpy.utils.general import make_subclasses_dict
 from ..utils.namespace import *
+from skimpy.utils.general import make_subclasses_dict
 from .utils import stringify_stoichiometry
 
 
-def make_convenience(stoichiometry):
+
+def make_irrev_m_n_hill(stoichiometry):
 
     """
 
     :param stoichiometry is a list of the reaction stoichioemtry
     """
+
+    # This refresh all subclasses and fetches already create mechanism classes
     ALL_MECHANISM_SUBCLASSES = make_subclasses_dict(KineticMechanism)
 
-    new_class_name = "Convenience"\
+    new_class_name = "IrrevHillNM"\
                      + "_{0}".format(stringify_stoichiometry(stoichiometry))
 
     if new_class_name in ALL_MECHANISM_SUBCLASSES.keys():
         return ALL_MECHANISM_SUBCLASSES[new_class_name]
 
-    class Convenience(KineticMechanism):
+    class IrrevHillNM(KineticMechanism):
         """A reversible N-M enyme class """
 
         suffix = "_{0}".format(stringify_stoichiometry(stoichiometry))
 
         reactant_list = []
+
         parameter_list = {'vmax_forward': [ODE, MCA, QSSA],
-                          'kcat_forward': [ODE,MCA,QSSA],
-                          'k_equilibrium': [ODE, MCA, QSSA], }
+                          'kcat_forward': [ODE, MCA, QSSA]}
 
         parameter_reactant_links = {}
         reactant_stoichiometry = {}
@@ -68,21 +71,24 @@ def make_convenience(stoichiometry):
         num_substrates = 1
         num_products = 1
         for s in stoichiometry:
-            if s < 0:
+            if s <= 0:
                 substrate = 'substrate{}'.format(num_substrates)
                 km_substrate ='km_substrate{}'.format(num_substrates)
+                hill_substrate = 'hill_coefficient_substrate{}'.format(num_substrates)
                 reactant_list.append(substrate)
                 parameter_list[km_substrate] = [ODE, MCA, QSSA]
+                parameter_list[hill_substrate] = [ODE, MCA, QSSA]
                 parameter_reactant_links[km_substrate] = substrate
+                parameter_reactant_links[hill_substrate] = substrate
                 reactant_stoichiometry[substrate] = float(s)
                 num_substrates += 1
 
             if s > 0:
                 product = 'product{}'.format(num_products)
-                km_product ='km_product{}'.format(num_products)
+                #km_product ='km_product{}'.format(num_products)
                 reactant_list.append(product)
-                parameter_list[km_product] = [ODE, MCA, QSSA]
-                parameter_reactant_links[km_product] = product
+                #parameter_list[km_product] = [ODE, MCA, QSSA]
+                #parameter_reactant_links[km_product] = product
                 reactant_stoichiometry[product] = float(s)
                 num_products += 1
 
@@ -100,7 +106,12 @@ def make_convenience(stoichiometry):
 
         def get_qssa_rate_expression(self):
             reactant_km_relation = {self.reactants[v].symbol: k
-                                    for k, v in self.parameter_reactant_links.items()}
+                                    for k, v in self.parameter_reactant_links.items()
+                                    if k.startswith('km_')}
+            reactant_hill_relation = {self.reactants[v].symbol: k
+                                    for k, v in self.parameter_reactant_links.items()
+                                    if k.startswith('hill_')}
+
 
             substrates = {k:r for k,r in self.reactants.items()
                           if k.startswith('substrate')}
@@ -108,8 +119,6 @@ def make_convenience(stoichiometry):
             products= {k:r for k,r in self.reactants.items()
                           if k.startswith('product')}
 
-
-            keq = self.parameters.k_equilibrium.symbol
             #TODO EXTEND TO ALL OTHER MECHANISMS
             if self.enzyme is None:
                 vmaxf = self.parameters.vmax_forward.symbol
@@ -117,41 +126,16 @@ def make_convenience(stoichiometry):
                 vmaxf = self.parameters.kcat_forward.symbol * \
                         self.reactants.enzyme.symbol
 
-            common_denominator_substrates = 1
-            fwd_nominator = vmaxf
-            bwd_nominator = vmaxf/keq
+            forward_rate_expression = vmaxf
+            backward_rate_expression = sympy.S.Zero
 
             for type, this_substrate in substrates.items():
-                common_denominator_this_substrate = 1
                 s = this_substrate.symbol
                 kms = self.parameters[reactant_km_relation[s]].symbol
-                stoich = self.reactant_stoichiometry[type]
-                for alpha in range(int(abs(stoich))):
-                    common_denominator_this_substrate += (s/kms)**(alpha+1)
-                # Multiply for every substrate
-                common_denominator_substrates *= common_denominator_this_substrate
+                h = self.parameters[reactant_hill_relation[s]].symbol
+                # To make this expression stick ...
+                forward_rate_expression *= (s/kms)**h/(1+(s/kms)**h)
 
-                fwd_nominator *= (s/kms)**abs(stoich)
-                bwd_nominator *= kms**(-1*abs(stoich))
-
-            common_denominator_products = 1
-            for type, this_product in products.items():
-                common_denominator_this_product = 1
-                p = this_product.symbol
-                kmp = self.parameters[reactant_km_relation[p]].symbol
-                stoich = self.reactant_stoichiometry[type]
-                for beta in range(int(abs(stoich))):
-                    common_denominator_this_product += (p/kmp)**(beta+1)
-                # Multiply for every product
-                common_denominator_products *= common_denominator_this_product
-
-                bwd_nominator *= p**abs(stoich)
-
-            common_denominator = common_denominator_substrates +\
-                                 common_denominator_products - 1
-
-            forward_rate_expression = fwd_nominator/common_denominator
-            backward_rate_expression = bwd_nominator/common_denominator
             rate_expression = forward_rate_expression-backward_rate_expression
 
             self.reaction_rates = TabDict([('v_net', rate_expression),
@@ -161,23 +145,15 @@ def make_convenience(stoichiometry):
 
             expressions = {}
 
-            # TODO Find a better solution to handle duplicate substrates
-            # The dict currently does not allow for this
             for type, this_substrate in substrates.items():
                 s = this_substrate.symbol
                 stoich = self.reactant_stoichiometry[type]
-                if s in expressions.keys():
-                    expressions[s] += stoich * rate_expression
-                else:
-                    expressions[s] = stoich*rate_expression
+                expressions[s] = stoich*rate_expression
 
             for type, this_product in products.items():
                 p = this_product.symbol
                 stoich = self.reactant_stoichiometry[type]
-                if p in expressions.keys():
-                    expressions[p] += stoich * rate_expression
-                else:
-                    expressions[p] = stoich*rate_expression
+                expressions[p] = stoich * rate_expression
 
             self.expressions = expressions
             self.expression_parameters = self.get_parameters_from_expression(rate_expression)
@@ -190,27 +166,19 @@ def make_convenience(stoichiometry):
             products= {k:r for k,r in self.reactants.items()
                           if k.startswith('product')}
             
-            expressions = {}
             for type, this_substrate in substrates.items():
                 s = this_substrate.symbol
                 stoich = self.reactant_stoichiometry[type]
-                if s in expressions.keys():
-                    expressions[s] += stoich * self.reaction_rates['v_net']
-                else:
-                    expressions[s] = stoich*self.reaction_rates['v_net']
+                self.expressions[s] = stoich*self.reaction_rates['v_net']
 
             for type, this_product in products.items():
                 p = this_product.symbol
                 stoich = self.reactant_stoichiometry[type]
-                if p in expressions.keys():
-                    expressions[p] += stoich * self.reaction_rates['v_net']
-                else:
-                    expressions[p] = stoich * self.reaction_rates['v_net']
+                self.expressions[p] = stoich*self.reaction_rates['v_net']
 
-                self.expressions = expressions
 
         """"
-        Convenience kinetics has no detailed mechanism 
+        IrevvHille M N kinetics has no detailed mechanism 
         """
         def get_full_rate_expression(self):
             raise NotImplementedError
@@ -218,6 +186,6 @@ def make_convenience(stoichiometry):
         def calculate_rate_constants(self):
             raise NotImplementedError
 
-    Convenience.__name__ += Convenience.suffix
+    IrrevHillNM.__name__ += IrrevHillNM.suffix
 
-    return Convenience
+    return IrrevHillNM

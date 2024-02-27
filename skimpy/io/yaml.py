@@ -54,13 +54,17 @@ def get_modifier_subclasses():
     return make_subclasses_dict(ExpressionModifier)
 
 #TODO We need to do better?
-ALL_GENERIC_MECHANISM_SUBCLASSES = {'Convenience': make_convenience,
-                                    'GeneralizedReversibleHill': make_generalized_reversible_hill_n_n,
-                                    'H1GeneralizedReversibleHill':make_generalized_reversible_hill_n_n_h1,
-                                    'IrrevMichaelisMenten': make_irrev_m_n_michaelis_menten,
-                                    'IrrevMassaction': make_irrev_massaction,
-                                    'RevMassaction': make_rev_massaction,
-                                    'ConvenienceInhibited': make_convenience_with_inhibition}
+ALL_GENERIC_MECHANISM_SUBCLASSES = TabDict([
+('Convenience', make_convenience),
+('GeneralizedReversibleHill', make_generalized_reversible_hill_n_n),
+('H1GeneralizedReversibleHill',make_generalized_reversible_hill_n_n_h1),
+('IrrevMichaelisMenten', make_irrev_m_n_michaelis_menten),
+('IrrevHillNM', make_irrev_m_n_hill),
+('IrrevMassaction', make_irrev_massaction),
+('RevMassaction', make_rev_massaction),
+('ConvenienceInhibited', make_convenience_with_inhibition),
+('H1GeneralizedReversibleHillInhibited', make_generalized_reversible_hill_n_n_h1_with_inhibition),
+])
 
 FIELDS_TO_SERIALIZE = [
                        # 'variables',
@@ -107,6 +111,7 @@ def compartment_representer(dumper, data):
 def mechanism_representer(dumper, data):
     the_dict = {k:v.name for k,v in data.reactants.items()}
     the_dict['class'] = data.__class__.__name__
+
     _find = lambda s: the_dict['class'].find(s) >= 0
     if any(map(_find , ALL_GENERIC_MECHANISM_SUBCLASSES)):
         the_dict['mechanism_stoichiometry'] = data.reactant_stoichiometry
@@ -246,9 +251,9 @@ def load_yaml_model(path):
                                 )
         # Add kinetic modifiers
         modifiers = the_reaction['modifiers']
-        for the_modifier in modifiers.values():
+        for the_mod_name, the_modifier in modifiers.items():
             TheModifier = get_mechanism(the_modifier)
-            new_modifier = TheModifier(**the_modifier)
+            new_modifier = TheModifier(**the_modifier, name=the_mod_name, reaction=new_reaction)
             new_reaction.modifiers[new_modifier.name] = new_modifier
 
         new.add_reaction(new_reaction)
@@ -294,11 +299,14 @@ def load_yaml_model(path):
     #             #No value found
     #             pass
     this_params = new.parameters
+    omitted_params = []
     for parameter, value in the_dict['parameters'].items():
         try:
             this_params[parameter].value = value
         except KeyError:
+            omitted_params.append(parameter)
             pass
+    print(f"These parameters are omitted due to KeyError: \n{omitted_params}")
 
     # Initial conditions
     for the_ic, value in the_dict['initial_conditions'].items():

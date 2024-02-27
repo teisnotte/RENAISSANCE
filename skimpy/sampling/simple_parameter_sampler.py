@@ -32,6 +32,8 @@ from numpy.random import sample
 from scipy.linalg import eigvals as eigenvalues
 from sympy import Symbol
 
+import scipy
+
 from skimpy.utils.namespace import *
 
 from skimpy.sampling import ParameterSampler, SaturationParameterFunction, FluxParameterFunction
@@ -55,7 +57,7 @@ class SimpleParameterSampler(ParameterSampler):
                only_stable=True,
                min_max_eigenvalues=False,
                seed=123,
-               bounds_sample=(0,1),
+               bounds_sample=(0, 1),
                max_trials=1e6):
 
         parameter_population = []
@@ -105,7 +107,16 @@ class SimpleParameterSampler(ParameterSampler):
             # largest_eigenvalue = eigenvalues(this_jacobian, k=1, which='LR',
             #                                  return_eigenvectors=False)
             # Test suggests that this is apparently much faster ....
-            this_real_eigenvalues = sorted(np.real(eigenvalues(this_jacobian.todense())))
+
+            #this_real_eigenvalues = sorted(np.real(eigenvalues(this_jacobian.todense())))
+
+            # Next level optimization using direclty the lapack function
+            lamr, lami, vl, vr, info = scipy.linalg.lapack.dgeev(this_jacobian.todense(),
+                                                                 compute_vl=1,
+                                                                 compute_vr=0,
+                                                                 )
+
+            this_real_eigenvalues = sorted(lamr)
 
             largest_eigenvalue = this_real_eigenvalues[-1]
             smallest_eigenvalue = this_real_eigenvalues[0]
@@ -171,8 +182,16 @@ class SimpleParameterSampler(ParameterSampler):
         # Set all vmax/flux parameters to 1.
         # TODO Generalize into Flux and Saturation parameters
         for this_reaction in compiled_model.reactions.values():
-            vmax_param = this_reaction.parameters.vmax_forward
-            parameter_sample[vmax_param.symbol] = 1
+            try:
+                if this_reaction.enzyme is None:
+                    vmax_param = this_reaction.parameters.vmax_forward
+                    parameter_sample[vmax_param.symbol] = 1
+                else:
+                    vmax_param = this_reaction.parameters.kcat_forward
+                    parameter_sample[vmax_param.symbol] = 1
+
+            except AttributeError:
+                pass
 
         if not hasattr(compiled_model, 'saturation_parameter_function')\
            or not hasattr(compiled_model, 'flux_parameter_function'):
