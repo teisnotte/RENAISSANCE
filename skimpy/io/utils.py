@@ -25,6 +25,7 @@ limitations under the License.
 
 """
 
+from skimpy.core.modifiers import FirstOrderSmallMoleculeModifier
 from skimpy.mechanisms import *
 from skimpy.utils.general import sanitize_cobra_vars
 from operator import itemgetter
@@ -106,8 +107,12 @@ def create_reaction_from_stoich(name,
                                 enzyme=reaction_group,
                                )
 
-    # Add small molecules modifiers
-    small_molecule_modifier = model_generator.small_molecule_modifier
+    # Add small molecules modifiers - code changed to have 1st order modifier for IrrevMichMenten
+    if 'IrrevMichaelisMenten' in mechanism.__name__:
+        small_molecule_modifier = FirstOrderSmallMoleculeModifier
+    else:
+        small_molecule_modifier = model_generator.small_molecule_modifier
+
     for this_sm, stoich in this_reaction_small_molecules.items():
         small_molecule_mod = small_molecule_modifier(this_sm, stoich)
         skimpy_reaction.modifiers[small_molecule_mod.name] = small_molecule_mod
@@ -134,6 +139,13 @@ def guess_mechanism(reactants,inhibitors,irrev=None):
 
     is_integer = all([float(i).is_integer() for i in stoich] )
 
+    # Piece of code for determining if there is a transport from p to e
+    is_p_e_trans = False
+    compartments = [r[-1] for r in reactants.keys() if r[-1] == 'p' or r[-1] == 'e']
+    unique_compartments = list(set(compartments))
+    if len(unique_compartments) > 1:
+        is_p_e_trans = True
+
     if irrev or not is_integer:
         return make_irrev_m_n_michaelis_menten(stoich)
 
@@ -143,9 +155,12 @@ def guess_mechanism(reactants,inhibitors,irrev=None):
 
     # Note this kinetic leads to a model with more parameters we will create the draft based
     # On rev hill for bibi reactions.
-    # # 2) Reversible Michaelis Menten kinetics
+    # # 2) Reversible Michaelis Menten kinetics or Rev Mass Actino for p -> e transport for faster dynamics
     if stoich == [1, -1]:
-        return ReversibleMichaelisMenten
+        if is_p_e_trans:
+            return make_rev_massaction(stoich)
+        else:
+            return ReversibleMichaelisMenten
     # mechanism = check_rev_michaelis_menten(reactants)
     # if mechanism is not None:
     #     return mechanism
@@ -188,14 +203,58 @@ def check_rev_michaelis_menten(reactants):
 
     return None
 
+def align_cofactors(reactants):
+    """
+    This function makes sure that the cofactor pairs are aligned
+    :param reactants: a TabDict of reactant names as strings with the corresponding stoichiometry
+    :return:
+    """
+
+    products = [k for k, v in reactants.items() if v > 0]
+    substrates = [k for k, v in reactants.items() if v < 0]
+    cofactor_pairs = {'nadh': 'nad',
+                      'nad': 'nadh',
+                      'nadp': 'nadph',
+                      'nadph': 'nadp',
+                      'atp': 'adp',
+                      'adp': 'atp',
+                      }
+
+    sorted_products = []
+    sorted_substrates = []
+
+    # Loop through all the products
+    for this_prod in products:
+        prod_name = this_prod[:-2]              # the last 2 characters denote the compartment
+
+        # Check if the product is a cofactor --> pop it from the products list --> add it to the sorted products
+        if prod_name in cofactor_pairs.keys():
+            products.remove(this_prod)
+            sorted_products.append(this_prod)
+
+            # Look for the other partner in substrates --> pop it from substrates --> add it to sorted substrates
+            for this_substrate in substrates:
+                if this_substrate[:-2] == cofactor_pairs[prod_name]:
+                    substrates.remove(this_substrate)
+                    sorted_substrates.append(this_substrate)
+
+    # Add the remaining products and substrates to the sorted lists
+    sorted_products.extend(products)
+    sorted_substrates.extend(substrates)
+
+    reactants_ = sorted_products + sorted_substrates
+    reactants_aligned = TabDict({r:reactants[r] for r in reactants_})
+
+    return reactants_aligned
 
 def make_reactant_set(mechanism,
                       reactants,
                       reactant_relations):
 
-    reactants_sorted = TabDict(sorted(reactants.items(),
-                                      key=itemgetter(1),
-                                      reverse=True))
+    if 'GeneralizedReversible' in str(mechanism): # TODO please use a better way to check for Gen Rev Hill
+        reactants_sorted = align_cofactors(reactants)
+    else:
+        reactants_sorted = TabDict(sorted(reactants.items(), key=itemgetter(1), reverse=True))
 
     reactant_list_temp = sorted(mechanism.reactant_stoichiometry.items(),
                            key=lambda x: (x[1],x[0]), reverse=True)

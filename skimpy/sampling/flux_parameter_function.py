@@ -69,11 +69,4 @@ class FluxParameterFunction():
             raise ValueError
 
         for rxn,v in zip(model.reactions.values(),flux_parameter_values):
-            try:
-                if rxn.enzyme is None:
-                    parameters[rxn.parameters.vmax_forward.symbol] = v
-                else:
-                    parameters[rxn.parameters.kcat_forward.symbol] = v
-
-            except AttributeError:
-                pass
+            parameters[rxn.parameters.vmax_forward.symbol] = v

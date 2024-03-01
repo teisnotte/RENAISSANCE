@@ -169,6 +169,7 @@ def load_enzyme_regulation(kmodel, df_regulations_all):
                 new_rxn.modifiers[this_regulator] = ActivationModifier(this_regulator, reaction=new_rxn)
 
         # Finally add the new reaction to rxns
+        print(f"Added regulation reaction {new_rxn}")        
         new_kmodel.add_reaction(new_rxn)
 
     # Note DW: This is currently still needed to avoid having 2 objects for the same reactant

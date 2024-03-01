@@ -53,14 +53,15 @@ class FluxFunction:
         self.function = make_cython_function(sym_vars, expr.values(), simplify=True, pool=pool)
 
 
-    def __call__(self,concentrations,  parameters):
-
+    def __call__(self,concentrations,  parameters=None):
+        # Todo handle different input types
         variables = [concentrations[str(x)] for x in self.variables]
 
-        param_values = self.parameters.values()
-
-        input_vars = list(variables) \
-                     + [parameters[x] for x in self.parameters]
+        if parameters is None:
+            input_vars = list(variables)+list(self.parameters.values())
+        else:
+            input_vars = list(variables) \
+                         + [parameters[x] for x in self.parameters]
 
         fluxes = np.zeros(len(self.expr))
 

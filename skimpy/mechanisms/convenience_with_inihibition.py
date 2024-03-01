@@ -46,7 +46,7 @@ def make_convenience_with_inhibition(stoichiometry, inihbitor_stoichiometry):
     """
     ALL_MECHANISM_SUBCLASSES = make_subclasses_dict(KineticMechanism)
 
-    new_class_name = "Convenience"\
+    new_class_name = "ConvenienceInhibited"\
                      + "_{0}".format(stringify_stoichiometry(stoichiometry,
                                                              inihibitors=inihbitor_stoichiometry))
 
@@ -72,6 +72,7 @@ def make_convenience_with_inhibition(stoichiometry, inihbitor_stoichiometry):
                           'k_equilibrium': [ODE, MCA, QSSA], }
 
         parameter_reactant_links = {}
+        parameter_inhibitor_links = {}
         reactant_stoichiometry = {}
 
         num_substrates = 1
@@ -120,13 +121,13 @@ def make_convenience_with_inhibition(stoichiometry, inihbitor_stoichiometry):
             KineticMechanism.__init__(self, name, reactants, parameters, inhibitors=inhibitors, **kwargs)
 
         def get_qssa_rate_expression(self):
-            reactant_km_relation = { }
-
+            reactant_km_relation = {}
+            inhibitor_ki_relation = {}
             for k, v in self.parameter_reactant_links.items():
                 if (v in self.reactants):
                     reactant_km_relation[self.reactants[v].symbol] = k
                 elif (v in self.inhibitors):
-                    reactant_km_relation[self.inhibitors[v].symbol] = k
+                    inhibitor_ki_relation[self.inhibitors[v].symbol] = k
                 else:
                     raise KeyError('Link not defined in any list')
 
@@ -180,7 +181,7 @@ def make_convenience_with_inhibition(stoichiometry, inihbitor_stoichiometry):
             common_denominator_inhibitors = 0
             for type, this_inhibitor in inhibitors.items():
                 i = this_inhibitor.symbol
-                kmi = self.parameters[reactant_km_relation[i]].symbol
+                kmi = self.parameters[inhibitor_ki_relation[i]].symbol
                 common_denominator_inhibitors += i/kmi
 
             common_denominator = common_denominator_substrates +\

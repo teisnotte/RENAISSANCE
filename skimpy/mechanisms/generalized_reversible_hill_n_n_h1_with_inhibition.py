@@ -50,7 +50,7 @@ def make_generalized_reversible_hill_n_n_h1_with_inhibition(stoichiometry, inihb
     # This refresh all subclasses and fetches already create mechanism classes
     ALL_MECHANISM_SUBCLASSES = make_subclasses_dict(KineticMechanism)
 
-    new_class_name = "H1GeneralizedReversibleHill_with_inhibition"\
+    new_class_name = "H1GeneralizedReversibleHillInhibited"\
                      + "_{0}".format(stringify_stoichiometry(stoichiometry,
                                                              inihibitors=inihbitor_stoichiometry))
 
@@ -64,11 +64,10 @@ def make_generalized_reversible_hill_n_n_h1_with_inhibition(stoichiometry, inihb
 
         """
 
-        # This will allow to abuse this kinetic for practical purposes
-        # #check_if stoichometry_is one
-        # if any(np_abs(stoichiometry) > 1)  \
-        #    or not (stoichiometry.count(-1) == stoichiometry.count(1)):
-        #     raise ValueError('Stoichiometry needs to be 1 and n to n substrates! ')
+        #check_if stoichometry_is one
+        if any(np_abs(stoichiometry) > 1)  \
+           or not (stoichiometry.count(-1) == stoichiometry.count(1)):
+            raise ValueError('Stoichiometry needs to be 1 and n to n substrates! ')
 
         suffix = "_{0}".format(stringify_stoichiometry(stoichiometry, inihibitors=inihbitor_stoichiometry))
 
@@ -81,6 +80,7 @@ def make_generalized_reversible_hill_n_n_h1_with_inhibition(stoichiometry, inihb
 
         parameter_reactant_links = {}
         reactant_parameter_links = {}
+        inhibitor_parameter_links = {}
         reactant_stoichiometry = {}
 
         num_substrates = 1
@@ -114,7 +114,7 @@ def make_generalized_reversible_hill_n_n_h1_with_inhibition(stoichiometry, inihb
             inhibitor_list.append(inhibitor)
             parameter_list[ki_inhibitor] = [ODE, MCA, QSSA]
             parameter_reactant_links[ki_inhibitor] = inhibitor
-            reactant_parameter_links[inhibitor] = ki_inhibitor
+            inhibitor_parameter_links[inhibitor] = ki_inhibitor
             #reactant_stoichiometry[inhibitor] = 0.0
             num_inhibitors += 1
                             
@@ -186,7 +186,7 @@ def make_generalized_reversible_hill_n_n_h1_with_inhibition(stoichiometry, inihb
             for this_inhibitor in inhibitors.items():
                 inhibitor_type = this_inhibitor[0]
                 i = this_inhibitor[1].symbol
-                kmi = self.parameters[self.reactant_parameter_links[inhibitor_type]].symbol
+                kmi = self.parameters[self.inhibitor_parameter_links[inhibitor_type]].symbol
                 common_denominator += i/kmi
             
             

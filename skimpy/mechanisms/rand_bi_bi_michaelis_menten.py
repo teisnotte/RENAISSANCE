@@ -75,11 +75,10 @@ class RandBiBiReversibleMichaelisMenten(KineticMechanism):
     ElementaryReactions = namedtuple('ElementaryReactions',[])
 
 
-    def __init__(self, name, reactants, parameters=None, **kwargs):
+    def __init__(self, name, reactants, parameters=None):
         # FIXME dynamic linking, separaret parametrizations from model init
         # FIXME Reaction has a mechanism, and this is a mechanism
-        KineticMechanism.__init__(self, name, reactants, parameters, **kwargs)
-
+        KineticMechanism.__init__(self, name, reactants, parameters)
 
     def get_qssa_rate_expression(self):
 
