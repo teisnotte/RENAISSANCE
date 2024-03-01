@@ -38,7 +38,15 @@ from sympy.printing import ccode
 from sympy import Symbol
 
 
-#SUPPORTS ONLY GCC!
+"""
+TODO: 
+We currently use cython to generate the code, this offers a safe type conversion.
+The generated cython code wraps every line in a function increasing the compilation
+and execution time 
+But as sympy code printer directly prints C-code we should use this to generate a swig interface.
+"""
+
+# This should be plat form depednent using distrtools
 COMPILER = "gcc -fPIC -shared -w -O3"
 
 # Test to write our own compiler

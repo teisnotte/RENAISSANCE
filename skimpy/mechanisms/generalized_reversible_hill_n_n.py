@@ -62,11 +62,10 @@ def make_generalized_reversible_hill_n_n(stoichiometry):
 
         """
 
-        # This will allow to abuse this kinetic for practical purposes
-        # #check_if stoichometry_is one
-        # if any(np_abs(stoichiometry) > 1)  \
-        #    or not (stoichiometry.count(-1) == stoichiometry.count(1)):
-        #     raise ValueError('Stoichiometry needs to be 1 and n to n substrates! ')
+        #check_if stoichometry_is one
+        if any(np_abs(stoichiometry) > 1)  \
+           or not (stoichiometry.count(-1) == stoichiometry.count(1)):
+            raise ValueError('Stoichiometry needs to be 1 and n to n substrates! ')
 
         suffix = "_{0}".format(stringify_stoichiometry(stoichiometry))
 

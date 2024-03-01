@@ -64,8 +64,7 @@ def modal_matrix(kmodel,concentration_dict,parameters, flux_modes=False, toleran
                                        kmodel.pool)
 
 
-
-    fluxes = kmodel.flux_fun(concentration_dict,parameters=parameters)
+    fluxes = kmodel.flux_fun(concentration_dict, parameters=parameters)
 
     concentrations= [concentration_dict[str(k)] for k in kmodel.variables]
 
