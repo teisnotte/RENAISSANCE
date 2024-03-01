@@ -53,16 +53,17 @@ def get_boundary_subclasses():
 def get_modifier_subclasses():
     return make_subclasses_dict(ExpressionModifier)
 
-#TODO We need to do better? -- The inhibited classes need to come first as we only check if a classname starts with the names below
+#TODO We need to do better?
 ALL_GENERIC_MECHANISM_SUBCLASSES = TabDict([
-('ConvenienceInhibited', make_convenience_with_inhibition),
 ('Convenience', make_convenience),
-('H1GeneralizedReversibleHillInhibited', make_generalized_reversible_hill_n_n_h1_with_inhibition),
 ('GeneralizedReversibleHill', make_generalized_reversible_hill_n_n),
 ('H1GeneralizedReversibleHill',make_generalized_reversible_hill_n_n_h1),
 ('IrrevMichaelisMenten', make_irrev_m_n_michaelis_menten),
+('IrrevHillNM', make_irrev_m_n_hill),
 ('IrrevMassaction', make_irrev_massaction),
 ('RevMassaction', make_rev_massaction),
+('ConvenienceInhibited', make_convenience_with_inhibition),
+('H1GeneralizedReversibleHillInhibited', make_generalized_reversible_hill_n_n_h1_with_inhibition),
 ])
 
 FIELDS_TO_SERIALIZE = [
@@ -114,15 +115,12 @@ def mechanism_representer(dumper, data):
     _find = lambda s: the_dict['class'].find(s) >= 0
     if any(map(_find , ALL_GENERIC_MECHANISM_SUBCLASSES)):
         the_dict['mechanism_stoichiometry'] = data.reactant_stoichiometry
-        if data.inhibitors is not None:
-            the_dict['inhibitors'] = {k:v.name for k,v in data.inhibitors.items()} # Recently added to export inhibitors as well!!!
+
         #Clean the class name (will be reconstructed from stoichometry)
         the_dict['class'] = re_sub(data.__class__.suffix,'',the_dict['class'])
 
     elif any(map(_find , get_modifier_subclasses())):
         the_dict['mechanism_stoichiometry'] = data.reactant_stoichiometry
-        if data.inhibitors is not None:
-            the_dict['inhibitors'] = {k:v.name for k,v in data.inhibitors.items()}  # Recently added to export inhibitors as well!!!
 
     return dumper.represent_dict(the_dict)
 
@@ -217,16 +215,11 @@ def get_mechanism(classdict):
                         for k, v in stoich_dict.items()]
 
         stoichiometry = [v for k,v in sorted(index_stoich)]
-
-        # We will also need to add the inhibitor stoichiometry if there are inhibitors
-        if 'inhibitors' in classdict.keys():
-            inhibitor_stoichiometry = np.ones(len(classdict['inhibitors'].keys()))
-            return make_mechanism(stoichiometry, inhibitor_stoichiometry)
-        else:
-            return make_mechanism(stoichiometry)
+        return make_mechanism(stoichiometry)
 
     except KeyError:
         return get_mechanism_subclasses()[classname]
+
 
 def get_generic_constructor(s):
     for name, constructor in ALL_GENERIC_MECHANISM_SUBCLASSES.items():
@@ -248,11 +241,6 @@ def load_yaml_model(path):
     # Rebuild the reactions
     for the_reaction in the_dict['reactions'].values():
         TheMechanism = get_mechanism(the_reaction['mechanism'])
-        the_inhibitors = None
-        # Get the inhibitors
-        if 'inhibitors' in the_reaction['mechanism'].keys():
-            the_inhibitors = TheMechanism.Inhibitors(**the_reaction['mechanism'].pop('inhibitors'))
-
         the_reactants = TheMechanism.Reactants(**the_reaction['mechanism'])
         the_enzyme = the_reaction['enzyme']
 
@@ -260,23 +248,13 @@ def load_yaml_model(path):
                                 mechanism=TheMechanism,
                                 reactants=the_reactants,
                                 enzyme = the_enzyme,
-                                inhibitors= the_inhibitors,
                                 )
         # Add kinetic modifiers
         modifiers = the_reaction['modifiers']
-        for the_modifier in modifiers.values():
+        for the_mod_name, the_modifier in modifiers.items():
             TheModifier = get_mechanism(the_modifier)
-            # If else statements to deal with activators and inhibitors - note the difference in how the h_c small molecules
-            # and the activator/inhibitor modifiers are named
-            if 'activator' in the_modifier.keys():
-                new_modifier = TheModifier(the_modifier['activator'], reaction=new_reaction)
-                new_reaction.modifiers[new_modifier.reactants['activator'].name] = new_modifier
-            elif 'inhibitor' in the_modifier.keys():
-                new_modifier = TheModifier(the_modifier['inhibitor'], reaction=new_reaction)
-                new_reaction.modifiers[new_modifier.reactants['inhibitor'].name] = new_modifier
-            else:
-                new_modifier = TheModifier(**the_modifier, reaction=new_reaction)
-                new_reaction.modifiers[new_modifier.name] = new_modifier
+            new_modifier = TheModifier(**the_modifier, name=the_mod_name, reaction=new_reaction)
+            new_reaction.modifiers[new_modifier.name] = new_modifier
 
         new.add_reaction(new_reaction)
 
@@ -322,14 +300,11 @@ def load_yaml_model(path):
     #             #No value found
     #             pass
     this_params = new.parameters
-    omitted_params = []
     for parameter, value in the_dict['parameters'].items():
         try:
             this_params[parameter].value = value
         except KeyError:
-            omitted_params.append(parameter)
             pass
-    print(f"These parameters are omitted due to KeyError: \n{omitted_params}")
 
     # Initial conditions
     for the_ic, value in the_dict['initial_conditions'].items():

@@ -25,6 +25,7 @@ limitations under the License.
 
 """
 
+import sympy
 
 from sympy import sympify
 from .mechanism import KineticMechanism,ElementrayReactionStep
@@ -32,35 +33,37 @@ from ..core.reactions import Reaction
 from ..utils.tabdict import TabDict
 from collections import namedtuple
 from ..core.itemsets import make_parameter_set, make_reactant_set
-from skimpy.utils.general import make_subclasses_dict
 from ..utils.namespace import *
+from skimpy.utils.general import make_subclasses_dict
 from .utils import stringify_stoichiometry
 
 
 
-def make_rev_massaction(stoichiometry):
+def make_irrev_m_n_hill(stoichiometry):
 
     """
 
     :param stoichiometry is a list of the reaction stoichioemtry
     """
+
     # This refresh all subclasses and fetches already create mechanism classes
     ALL_MECHANISM_SUBCLASSES = make_subclasses_dict(KineticMechanism)
 
-    new_class_name = "IrrevMassaction"\
+    new_class_name = "IrrevHillNM"\
                      + "_{0}".format(stringify_stoichiometry(stoichiometry))
 
     if new_class_name in ALL_MECHANISM_SUBCLASSES.keys():
         return ALL_MECHANISM_SUBCLASSES[new_class_name]
 
-    class RevMassaction(KineticMechanism):
+    class IrrevHillNM(KineticMechanism):
         """A reversible N-M enyme class """
 
         suffix = "_{0}".format(stringify_stoichiometry(stoichiometry))
 
         reactant_list = []
+
         parameter_list = {'vmax_forward': [ODE, MCA, QSSA],
-                          'k_equilibrium': [ODE, MCA, QSSA],}
+                          'kcat_forward': [ODE, MCA, QSSA]}
 
         parameter_reactant_links = {}
         reactant_stoichiometry = {}
@@ -68,15 +71,24 @@ def make_rev_massaction(stoichiometry):
         num_substrates = 1
         num_products = 1
         for s in stoichiometry:
-            if s < 0:
+            if s <= 0:
                 substrate = 'substrate{}'.format(num_substrates)
+                km_substrate ='km_substrate{}'.format(num_substrates)
+                hill_substrate = 'hill_coefficient_substrate{}'.format(num_substrates)
                 reactant_list.append(substrate)
+                parameter_list[km_substrate] = [ODE, MCA, QSSA]
+                parameter_list[hill_substrate] = [ODE, MCA, QSSA]
+                parameter_reactant_links[km_substrate] = substrate
+                parameter_reactant_links[hill_substrate] = substrate
                 reactant_stoichiometry[substrate] = float(s)
                 num_substrates += 1
 
             if s > 0:
                 product = 'product{}'.format(num_products)
+                #km_product ='km_product{}'.format(num_products)
                 reactant_list.append(product)
+                #parameter_list[km_product] = [ODE, MCA, QSSA]
+                #parameter_reactant_links[km_product] = product
                 reactant_stoichiometry[product] = float(s)
                 num_products += 1
 
@@ -93,6 +105,13 @@ def make_rev_massaction(stoichiometry):
             KineticMechanism.__init__(self, name, reactants, parameters, **kwargs)
 
         def get_qssa_rate_expression(self):
+            reactant_km_relation = {self.reactants[v].symbol: k
+                                    for k, v in self.parameter_reactant_links.items()
+                                    if k.startswith('km_')}
+            reactant_hill_relation = {self.reactants[v].symbol: k
+                                    for k, v in self.parameter_reactant_links.items()
+                                    if k.startswith('hill_')}
+
 
             substrates = {k:r for k,r in self.reactants.items()
                           if k.startswith('substrate')}
@@ -100,19 +119,22 @@ def make_rev_massaction(stoichiometry):
             products= {k:r for k,r in self.reactants.items()
                           if k.startswith('product')}
 
-            kf = self.parameters.vmax_forward.symbol
-            Keq = self.parameters.k_equilibrium.symbol
+            #TODO EXTEND TO ALL OTHER MECHANISMS
+            if self.enzyme is None:
+                vmaxf = self.parameters.vmax_forward.symbol
+            else:
+                vmaxf = self.parameters.kcat_forward.symbol * \
+                        self.reactants.enzyme.symbol
 
-            forward_rate_expression = kf
-            backward_rate_expression = kf/Keq
+            forward_rate_expression = vmaxf
+            backward_rate_expression = sympy.S.Zero
 
             for type, this_substrate in substrates.items():
                 s = this_substrate.symbol
-                forward_rate_expression *= s
-
-            for type, this_product in products.items():
-                p = this_product.symbol
-                backward_rate_expression *= p
+                kms = self.parameters[reactant_km_relation[s]].symbol
+                h = self.parameters[reactant_hill_relation[s]].symbol
+                # To make this expression stick ...
+                forward_rate_expression *= (s/kms)**h/(1+(s/kms)**h)
 
             rate_expression = forward_rate_expression-backward_rate_expression
 
@@ -156,7 +178,7 @@ def make_rev_massaction(stoichiometry):
 
 
         """"
-        Not implemented yet
+        IrevvHille M N kinetics has no detailed mechanism 
         """
         def get_full_rate_expression(self):
             raise NotImplementedError
@@ -164,6 +186,6 @@ def make_rev_massaction(stoichiometry):
         def calculate_rate_constants(self):
             raise NotImplementedError
 
-    RevMassaction.__name__ += RevMassaction.suffix
+    IrrevHillNM.__name__ += IrrevHillNM.suffix
 
-    return RevMassaction
+    return IrrevHillNM
