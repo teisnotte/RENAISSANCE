@@ -35,6 +35,7 @@ class EvolutionStrategy(object):
         return self.weights
 
     def _get_population(self):
+        """Get the population for the genetic algorithm."""
         population = []
         for i in range(self.POPULATION_SIZE):
             x = []
@@ -44,6 +45,16 @@ class EvolutionStrategy(object):
         return population
 
     def _get_rewards(self, pool, population):
+        """
+        Get rewards for a given population using parallel processing if a pool is provided, otherwise use a sequential approach.
+        
+        Args:
+            pool: The parallel processing pool, if any.
+            population: The population for which rewards need to be calculated.
+        
+        Returns:
+            numpy array: An array of rewards for the given population.
+        """
         if pool is not None:
             worker_args = ((self.get_reward, self._get_weights_try(self.weights, p)) for p in population)
             rewards = pool.map(worker_process, worker_args)
@@ -55,9 +66,20 @@ class EvolutionStrategy(object):
                 weights_try = self._get_weights_try(self.weights, p)
                 rewards.append(self.get_reward(weights_try))
         rewards = np.array(rewards)
+        print(rewards)
         return rewards
 
     def _update_weights(self, rewards, population):
+        """
+        Update the weights of the agent based on the rewards and the population.
+
+        Parameters:
+            rewards (array): The rewards obtained from the population.
+            population (array-like): The population of solutions.
+
+        Returns:
+            None
+        """
         std = rewards.std()
         if std == 0:
             return
@@ -69,6 +91,16 @@ class EvolutionStrategy(object):
         self.learning_rate *= self.decay
 
     def run(self, iterations, print_step=1):
+        """
+        Run the genetic algorithm for a specified number of iterations.
+
+        Parameters:
+            iterations (int): The number of iterations to run the genetic algorithm.
+            print_step (int, optional): The frequency with which to print progress. Defaults to 1.
+
+        Returns:
+            numpy.ndarray: An array of rewards obtained at each iteration.
+        """
         pool = mp.Pool(self.num_threads) if self.num_threads > 1 else None
         print('starting')
         start = time.time()

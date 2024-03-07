@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from configparser import ConfigParser
 from keras.layers import Input, Dense, Reshape, Flatten, Dropout, multiply, concatenate
-from keras.layers.advanced_activations import LeakyReLU
+from keras.layers import LeakyReLU
 from keras.models import Sequential, Model
 from keras.optimizers import Adam
 
@@ -15,7 +15,7 @@ configs = ConfigParser()
 configs.read('configfile.ini')
 
 class MLP():
-    def __init__(self, cond_class, min_x, max_x, n_samples, NAMES_km, param_fixing):
+    def __init__(self, cond_class, min_x, max_x, n_samples, NAMES_km, no_kms, param_fixing):
         self.latent_dim = int(configs['MLP']['latent_dim'])
         print(self.latent_dim)
         self.cond_class = cond_class
@@ -24,11 +24,11 @@ class MLP():
         self.label_shape = 1
         self.param_fixing = param_fixing
         self.names_km = NAMES_km
-        self.latent = latent
-        self.noise = noise_input
+        # self.latent = latent
+        # self.noise = noise_input
 
         self.n_samples = n_samples
-        self.n_parameters = int(configs['MLP']['no_kms'])
+        self.n_parameters = no_kms
 
         # Parameter fixing constraints
         if self.param_fixing==1:
