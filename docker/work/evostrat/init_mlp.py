@@ -2,10 +2,10 @@ import sys
 import numpy as np
 import pandas as pd
 from configparser import ConfigParser
-from keras.layers import Input, Dense, Reshape, Flatten, Dropout, multiply, concatenate
-from keras.layers import LeakyReLU
-from keras.models import Sequential, Model
-from keras.optimizers import Adam
+from tensorflow.keras.layers import Input, Dense, Reshape, Flatten, Dropout, multiply, concatenate
+from tensorflow.keras.layers import LeakyReLU
+from tensorflow.keras.models import Sequential, Model
+from tensorflow.keras.optimizers import Adam
 
 sys.path.append('../')
 import helper as hp
@@ -56,7 +56,12 @@ class MLP():
         param = self.generator([noise, label])
 
     def build_generator(self):
+        """
+        Build a generator model for the GAN.
 
+        Returns:
+            Model: The generator model that takes noise and label as input and outputs parameters.
+        """
         # get architecture from config
         layer_1 = int(configs['MLP']['layer_1'])
         layer_2 = int(configs['MLP']['layer_2'])
@@ -87,7 +92,9 @@ class MLP():
         return Model([noise, label], param)
 
     def sample_parameters(self):
-
+        """
+        Sample parameters using noise and labels, then predict and rescale according to previous scaling on X_train. Returns the rescaled parameters or the result of the param_fixer, depending on the param_fixing flag.
+        """
         noise = np.random.normal(0, 1, (self.n_samples, self.latent_dim))
 
         # we just try to generate stable models

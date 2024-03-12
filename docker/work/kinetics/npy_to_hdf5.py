@@ -26,6 +26,7 @@ limitations under the License.
 """
 from pytfa.io.json import load_json_model
 from skimpy.io.yaml import load_yaml_model
+from skimpy.io.regulation import load_enzyme_regulation
 from skimpy.analysis.oracle.load_pytfa_solution import load_fluxes, \
     load_concentrations, load_equilibrium_constants
 from skimpy.sampling.simple_parameter_sampler import SimpleParameterSampler
@@ -42,25 +43,23 @@ import helper as hp
 from skimpy.core.parameters import load_parameter_population
 
 #sys.path.append("..")
-def store_as_hdf5(gen_params, met_model, names_km, ss_idx, output_path, output_name):
+def store_as_hdf5(path_to_tmodel, path_to_kmodel, path_to_samples, regulation, gen_params, names_km, ss_idx, output_path, output_name):
 
     #Convenience factors
     NCPU = 36
-    CONCENTRATION_SCALING = 1e6  # 1 mol to 1 mmol
+    CONCENTRATION_SCALING = 1e9  # 1 mol to 1 mmol
     TIME_SCALING = 1  # 1hr
     # Parameters of the E. Coli cell
     DENSITY = 1105  # g/L
-    GDW_GWW_RATIO = 0.38  # Assumes 70% Water
-
-    exp_id = 'fdp1'
-    exp_id = 'fdp1'
-
-    path_to_tmodel = f'models/{met_model}/thermo/varma_{exp_id}'
-    path_to_kmodel = f'models/{met_model}/kinetic/kin_varma_curated.yaml'
-    path_to_samples = f'models/{met_model}/steady_state_samples/steady_states.csv'
+    GDW_GWW_RATIO = 0.3  # Assumes 70% Water
 
     tmodel = load_json_model(path_to_tmodel)
     kmodel = load_yaml_model(path_to_kmodel)
+    # Add regulation data to kinetic model
+    df_regulations = regulation[regulation['reaction_id'].isin(list(kmodel.reactions.keys()))]
+    df_regulations = df_regulations[df_regulations['regulator'].isin(list(kmodel.reactants.keys()))]
+    kmodel = load_enzyme_regulation(kmodel, df_regulations)
+
     kmodel.prepare()
     kmodel.compile_jacobian(sim_type=QSSA)
     samples = pd.read_csv(path_to_samples, header=0, index_col=0).iloc[ss_idx, 0:]
@@ -133,3 +132,4 @@ def store_as_hdf5(gen_params, met_model, names_km, ss_idx, output_path, output_n
     param_pop2.save(f'{output_path}/{output_name}.hdf5')
     pd.DataFrame(max_eig).to_csv(f'{output_path}/{output_name}_max_eig.csv')
     pd.DataFrame(min_eig).to_csv(f'{output_path}/{output_name}_min_eig.csv')
+    print(f'Saved {output_path}/{output_name}.hdf5')
