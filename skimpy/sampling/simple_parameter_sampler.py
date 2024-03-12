@@ -127,25 +127,10 @@ class SimpleParameterSampler(ParameterSampler):
                                        '(max real part eigv: {})'.
                                        format(is_stable, largest_eigenvalue))
 
-            # TODO: commit this! -flag to see if Vmax bounds are satisfied
-            vmax_satisfied = True
-            for this_reaction in compiled_model.reactions.values():
-                lb = this_reaction.parameters.vmax_forward.bounds[0]
-                ub = this_reaction.parameters.vmax_forward.bounds[1]
-                if lb is not None:
-                    if parameter_sample[this_reaction.parameters.vmax_forward.symbol] < lb:
-                        vmax_satisfied = False
-                        break
-                if ub is not None:
-                    if parameter_sample[this_reaction.parameters.vmax_forward.symbol] > ub:
-                        vmax_satisfied = False
-                        break
-
             if is_stable or not only_stable:
-                if vmax_satisfied:
-                    parameter_population.append(parameter_sample)
-                    largest_eigenvalues.append(largest_eigenvalue)
-                    smallest_eigenvalues.append(smallest_eigenvalue)
+                parameter_population.append(parameter_sample)
+                largest_eigenvalues.append(largest_eigenvalue)
+                smallest_eigenvalues.append(smallest_eigenvalue)
 
             # Count the trials
             trials += 1
@@ -197,8 +182,16 @@ class SimpleParameterSampler(ParameterSampler):
         # Set all vmax/flux parameters to 1.
         # TODO Generalize into Flux and Saturation parameters
         for this_reaction in compiled_model.reactions.values():
-            vmax_param = this_reaction.parameters.vmax_forward
-            parameter_sample[vmax_param.symbol] = 1
+            try:
+                if this_reaction.enzyme is None:
+                    vmax_param = this_reaction.parameters.vmax_forward
+                    parameter_sample[vmax_param.symbol] = 1
+                else:
+                    vmax_param = this_reaction.parameters.kcat_forward
+                    parameter_sample[vmax_param.symbol] = 1
+
+            except AttributeError:
+                pass
 
         if not hasattr(compiled_model, 'saturation_parameter_function')\
            or not hasattr(compiled_model, 'flux_parameter_function'):
