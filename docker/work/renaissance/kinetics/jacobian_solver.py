@@ -3,7 +3,6 @@ from skimpy.io.yaml import load_yaml_model
 from skimpy.analysis.oracle.load_pytfa_solution import load_fluxes, \
     load_concentrations, load_equilibrium_constants
 from skimpy.sampling.simple_parameter_sampler import SimpleParameterSampler
-import scipy
 from skimpy.core import *
 from skimpy.mechanisms import *
 from scipy.linalg import eigvals as eigenvalues
@@ -15,7 +14,6 @@ import numpy as np
 from skimpy.core.parameters import load_parameter_population
 from multiprocessing import Pool
 from sys import argv
-import time
 from skimpy.io.regulation import load_enzyme_regulation
 
 

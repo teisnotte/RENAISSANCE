@@ -37,11 +37,19 @@ from skimpy.utils.general import join_dicts
 
 def make_ode_fun(kinetic_model, sim_type, pool=None, custom_ode_update=None):
     """
+    Generate the ODE function for the given kinetic model.
 
-    :param kinetic_model:
-    :param sim_type:
-    :return:
+    Parameters:
+    - kinetic_model: The kinetic model object.
+    - sim_type: The type of simulation.
+    - pool: (Optional) The pool object.
+    - custom_ode_update: (Optional) A custom ODE update function.
+
+    Returns:
+    - ode_fun: The ODE function.
+    - variables: The variables for the ODE function.
     """
+
     all_data = get_expressions_from_model(kinetic_model, sim_type)
 
     # get expressions for dxdt
@@ -95,10 +103,14 @@ def make_ode_fun(kinetic_model, sim_type, pool=None, custom_ode_update=None):
 
 def make_flux_fun(kinetic_model, sim_type):
     """
+    A function that generates a FluxFunction object based on the given kinetic model and simulation type.
 
-    :param kinetic_model:
-    :param sim_type:
-    :return:
+    Args:
+        kinetic_model: The kinetic model used to generate the FluxFunction.
+        sim_type: The type of simulation being performed.
+
+    Returns:
+        FluxFunction: The FluxFunction object containing the vector function generated from the expressions.
     """
     all_data = get_expressions_from_model(kinetic_model, sim_type)
 
@@ -137,10 +149,15 @@ def make_flux_fun(kinetic_model, sim_type):
 def make_gamma_fun(kinetic_model):
     """
     Return a function that calculates the thermodynamic displacement for
-    all the reactions in a model
-    :param kinetic_model:
-    :return:
+    all the reactions in a model.
+
+    Parameters:
+    - kinetic_model: The kinetic model containing reactions and parameters.
+
+    Returns:
+    - gamma_fun: The gamma function generated from the kinetic model.
     """
+
     reactions = kinetic_model.reactions.values()
     all_parameters = []
     expr = TabDict([])
@@ -187,9 +204,10 @@ def make_gamma_fun(kinetic_model):
     return gamma_fun
 
 
-
-def make_expressions(variables, all_flux_expr, volume_ratios=None,pool=None):
-
+def make_expressions(variables, all_flux_expr, volume_ratios=None, pool=None):
+    """
+    A function to generate an expression dictionary based on given variables, flux expressions, volume ratios, and a processing pool.
+    """
     if pool is None:
         expr = dict.fromkeys(variables.values(), 0.0)
 
@@ -201,11 +219,8 @@ def make_expressions(variables, all_flux_expr, volume_ratios=None,pool=None):
                     pass
 
     else:
-
-        inputs = [(v,all_flux_expr) for v in variables.values()]
-
+        inputs = [(v, all_flux_expr) for v in variables.values()]
         list_expressions = pool.map(make_expresson_single_var, inputs)
-
         expr = join_dicts(list_expressions)
 
     #Add compartment volumes
@@ -215,10 +230,12 @@ def make_expressions(variables, all_flux_expr, volume_ratios=None,pool=None):
             # Mutiply massbalance for each metabolite by volume ratio
             expr[v] = volume_ratio*expr[v]
 
-
     return expr
 
 def make_expresson_single_var(input):
+    """
+    Generate a dictionary that sums up the values of a specific variable from a list of dictionaries.
+    """
     var, all_flux_expr = input
 
     this_expr = dict()
@@ -235,6 +252,18 @@ def make_expresson_single_var(input):
 def get_expressions_from_model(kinetic_model, sim_type,
                                medium_symbols=None,
                                biomass_symbol=None):
+    """
+    Get expressions and variables from a kinetic model based on the simulation type.
+
+    Args:
+        kinetic_model (object): The kinetic model object.
+        sim_type (str): The type of simulation to perform.
+        medium_symbols (list, optional): Symbols representing the medium.
+        biomass_symbol (str, optional): Symbol representing the biomass.
+
+    Returns:
+        list: A list of tuples containing expressions, fluxes, and parameters.
+    """
     sim_type = sim_type.lower()
     # Get all variables and expressions (Better solution with types?)
     # TODO This should be a method in KineticModel that stores the expressions

@@ -83,7 +83,7 @@ class ParameterValues(object):
 
 
 class ParameterValuePopulation(object):
-    def __init__(self,data, kmodel=None, index=None):
+    def __init__(self, data, kmodel=None, index=None):
 
         self.kmodel = kmodel
 
@@ -215,11 +215,20 @@ class ParameterValuePopulation(object):
         f.close()
 
 
-def load_parameter_population(filename, lower_index=None, upper_index=None):
+def load_parameter_population(filename, lower_index=0, upper_index=None):
+    """
+    Load parameter population from a given file.
+
+    Args:
+        filename (str): The name of the file to load.
+        lower_index (int, optional): The lower index for parameter sets. Defaults to None.
+        upper_index (int, optional): The upper index for parameter sets. Defaults to None.
+
+    Returns:
+        ParameterValuePopulation: The parameter population loaded from the file.
+    """
     f = h5py.File(filename, 'r')
     data = []
-    if lower_index is None:
-        lower_index = 0
     if upper_index is None:
         upper_index = int(np.array(f.get('num_parameters_sets')))
 
@@ -250,6 +259,17 @@ def load_parameter_population(filename, lower_index=None, upper_index=None):
 
 
 def concat_populations(values, kmodel=None, index=None):
+    """
+    Concatenates the populations of the given values and returns a ParameterValuePopulation.
+
+    Parameters:
+    values (list): The list of values whose populations will be concatenated.
+    kmodel (object, optional): The kmodel object to be used for concatenation. Defaults to None.
+    index (int, optional): The index to be used for concatenation. Defaults to None.
+
+    Returns:
+    ParameterValuePopulation: The concatenated population as a ParameterValuePopulation object.
+    """
     data = []
     for v in values:
         data.extend(v._data)

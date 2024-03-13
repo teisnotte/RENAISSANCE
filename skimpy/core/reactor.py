@@ -110,6 +110,9 @@ class Reactor(ABC):
 
     @property
     def variables(self):
+        """
+        Return a dictionary of variables including biomass variables, medium variables, model reactants, and custom variables.
+        """
         variables = copy(self.biomass_variables)
         variables.update(self.medium)
         for this_model in self.models.values():
@@ -186,10 +189,16 @@ class Reactor(ABC):
 
     def compile_ode(self, sim_type=QSSA, ncpu=1, add_dilution=False, custom_ode_update=None):
         """
+        Generate the compiled ODE function for the given simulation type.
 
-        :param sim_type:
-        :param ncpu:
-        :return:
+        Parameters:
+            sim_type (type): The type of simulation to be performed (default is QSSA).
+            ncpu (int): The number of CPUs to be used for compilation (default is 1).
+            add_dilution (bool): A flag indicating whether dilution needs to be added (default is False).
+            custom_ode_update (function): A custom function for updating the ODE (default is None).
+
+        Returns:
+            None
         """
         self.sim_type = sim_type
         if not hasattr(self, 'pool'):
@@ -257,12 +266,18 @@ class Reactor(ABC):
 def make_reactor_ode_fun(reactor, sim_type, pool=None, add_dilution=False,
                          custom_ode_update=None):
     """
-    This function generates the symbolic expressions for a reactor model
+    Generates a function that creates a system of ordinary differential equations (ODEs) for a reactor simulation.
 
-    :param reactor:
-    :param sim_type:
-    :param pool:
-    :return:
+    Args:
+        reactor: The reactor object for which the ODEs will be generated.
+        sim_type: The type of simulation to be performed.
+        pool: (optional) The pool object for parallel computation.
+        add_dilution: (optional) A boolean indicating whether dilution effects should be added to the ODEs.
+        custom_ode_update: (optional) A custom function for updating the ODEs.
+
+    Returns:
+        ode_fun: The generated ODE function.
+        variables: The variables used in the ODE function.
     """
 
     expression_list = []

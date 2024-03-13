@@ -31,6 +31,7 @@ from skimpy.core import BoundaryCondition
 from skimpy.core.reactor import Reactor
 from skimpy.utils.general import make_subclasses_dict
 from skimpy.utils.tabdict import TabDict
+from skimpy.io.regulation import load_enzyme_regulation
 
 
 def get_boundary_subclasses():
@@ -39,11 +40,15 @@ def get_boundary_subclasses():
 
 def make_batch_reactor(path, df_regulation = None):
     """
+    Create a batch reactor based on the information provided in the given YAML file.
 
-    :param path: path to config yml file to setup reactor
-    :return:
+    Args:
+    - path (str): The file path to the YAML file containing the necessary information.
+    - df_regulation (pandas.DataFrame, optional): A DataFrame containing regulation information. Defaults to None.
+
+    Returns:
+    - skimpy.core.Reactor: The created batch reactor.
     """
-    from skimpy.io.regulation import load_enzyme_regulation
 
     with open(path,'r') as fid:
             the_dict = yaml.full_load(fid)
@@ -53,8 +58,8 @@ def make_batch_reactor(path, df_regulation = None):
     for name, file in the_dict['models'].items():
 
         if df_regulation is not None:
-            orig_model = load_yaml_model(file)
-            model = load_enzyme_regulation(orig_model, df_regulation)
+            _model = load_yaml_model(file)
+            model = load_enzyme_regulation(_model, df_regulation)
         else:
             model = load_yaml_model(file)
         model.name = name

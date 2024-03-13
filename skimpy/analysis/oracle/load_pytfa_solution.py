@@ -40,6 +40,22 @@ def load_fluxes(solution_raw,tmodel,kmodel,
                 concentration_scaling=None,
                 time_scaling=None,
                 xmol_in_flux=1e-3):
+    """
+    Load fluxes from the solution_raw, tmodel, and kmodel and scale them based on various factors.
+    
+    Args:
+    - solution_raw: the raw flux solution
+    - tmodel: the thermodynamic model for the flux solution
+    - kmodel: the kinetic model for the flux solution
+    - density: the density of the system 
+    - ratio_gdw_gww: ratio of gDW to gWW 
+    - concentration_scaling: scaling factor for concentration 
+    - time_scaling: scaling factor for time 
+    - xmol_in_flux: input assumed to be mmol/gDW/hr (default is 1e-3)
+    
+    Returns:
+    - pd.Series: a series of fluxes sorted according to the kinetic model
+    """
     # TODO try to fetch from model
     if density is None \
         or ratio_gdw_gww is None \
@@ -69,6 +85,18 @@ def load_fluxes(solution_raw,tmodel,kmodel,
 
 
 def load_concentrations(solution_raw, tmodel, kmodel, concentration_scaling=None):
+    """
+    Load concentrations from a solution and scale them using a given concentration_scaling. 
+
+    Args:
+        solution_raw: The raw solution data.
+        tmodel: The thermodynamic model to fetch concentrations from.
+        kmodel: The kinetic model containing concentration_scaling.
+        concentration_scaling: The scaling factor for the concentrations.
+
+    Returns:
+        concentrations: A pandas Series containing the scaled concentrations.
+    """
     # TODO try to fetch from model
     if concentration_scaling is None:
         raise  ValueError("concentration_scaling is required as input or field of kmodel")
@@ -84,6 +112,19 @@ def load_concentrations(solution_raw, tmodel, kmodel, concentration_scaling=None
 def load_equilibrium_constants(solution_raw, tmodel, kmodel,
                                concentration_scaling=None,
                                in_place=False):
+    """
+    A function to load equilibrium constants for a given solution, kinetic model, and concentration scaling.
+    
+    Args:
+        solution_raw: The raw solution data.
+        tmodel: The kinetic model.
+        kmodel: The equilibrium constant model.
+        concentration_scaling: The scaling factor for concentrations.
+        in_place: A boolean indicating whether to modify the equilibrium constants in place.
+
+    Returns:
+        ParameterValues: The equilibrium constant values.
+    """
     # TODO try to fetch from model
     if concentration_scaling is None:
         raise  ValueError("concentration_scaling is required as input or field of kmodel")

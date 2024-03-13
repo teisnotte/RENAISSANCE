@@ -6,9 +6,8 @@ from tensorflow.keras.layers import Input, Dense, Reshape, Flatten, Dropout, mul
 from tensorflow.keras.layers import LeakyReLU
 from tensorflow.keras.models import Sequential, Model
 from tensorflow.keras.optimizers import Adam
-
+from renaissance.tools.helper import unscale_range
 sys.path.append('../')
-import helper as hp
 
 #Parse arguments from configfile
 configs = ConfigParser()
@@ -102,7 +101,7 @@ class MLP():
 
         gen_par = self.generator.predict([noise, sampled_labels])
         # Rescale parameters according to previous scaling on X_train
-        x_new, new_min, new_max = hp.unscale_range(gen_par, np.min(gen_par), np.max(gen_par), self.min_x, self.max_x)
+        x_new, new_min, new_max = unscale_range(gen_par, np.min(gen_par), np.max(gen_par), self.min_x, self.max_x)
 
         if self.param_fixing:
             return self.param_fixer(x_new)

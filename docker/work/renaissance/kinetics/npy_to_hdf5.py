@@ -37,9 +37,8 @@ from sympy import Symbol
 from skimpy.core.parameters import ParameterValues,ParameterValuePopulation
 import pandas as pd
 import numpy as np
-import pickle
 
-import helper as hp
+import tools.helper as hp
 from skimpy.core.parameters import load_parameter_population
 
 #sys.path.append("..")
