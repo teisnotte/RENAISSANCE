@@ -142,19 +142,20 @@ class SimpleParameterSampler(ParameterSampler):
 
     # Under construction new sampling with compiled function
     def _compile_sampling_functions(self, model,
-                                    concentrations,
-                                    fluxes):
+                                    concentrations):
         """
         Compiles the function for sampling using cython
         :param model:
         """
+        if not isinstance(concentrations, dict):
+            concentrations = {Symbol(k): v for k, v in concentrations.items()}
         model.saturation_parameter_function = SaturationParameterFunction(model,
                                                                           model.parameters,
                                                                           concentrations)
 
         model.flux_parameter_function = FluxParameterFunction(model,
                                                               model.parameters,
-                                                              concentrations,)
+                                                              concentrations)
 
     def _sample_saturation_step_compiled(self,
                                          compiled_model,

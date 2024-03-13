@@ -52,8 +52,14 @@ class FluxParameterFunction():
                  parameters,
                  concentration_dict,
                  flux_dict):
-        _parameters = [parameters[p] for p in self.sym_parameters]
-        _concentrations = [concentration_dict[c] for c in self.sym_concentrations]
+        try:
+            _parameters = [parameters[p] for p in self.sym_parameters]
+            if not isinstance(concentration_dict, dict):
+                _concentrations = [concentration_dict[c.name] for c in self.sym_concentrations]
+            else:
+                _concentrations = [concentration_dict[c] for c in self.sym_concentrations]
+        except Exception as e:
+            raise ValueError("The concentration or parameter input is not in the right configuration.") from e
 
         input = _parameters + _concentrations
         flux_parameter_values = np.zeros(len(model.reactions))
