@@ -39,7 +39,7 @@ from skimpy.analysis.ode.ode_fun import ODEFunction
 
 from skimpy.core.solution import ODESolution
 
-from multiprocessing.pool import Pool
+from multiprocess import Pool
 
 from sympy import exp, Symbol
 

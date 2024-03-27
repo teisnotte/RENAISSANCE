@@ -33,7 +33,6 @@ import numpy as np
 
 import tempfile
 
-import multiprocessing
 from sympy.printing import ccode
 from sympy import Symbol
 

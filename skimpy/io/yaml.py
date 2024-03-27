@@ -29,10 +29,6 @@ import yaml
 from yaml.representer import SafeRepresenter
 from re import sub as re_sub
 import re
-
-import numpy as np
-from scipy.sparse import csr_matrix, csc_matrix
-
 from skimpy.utils import TabDict, iterable_to_tabdict
 from skimpy.core import Item, Reactant, Parameter, Reaction, BoundaryCondition, \
     ConstantConcentration, KineticModel, ExpressionModifier
@@ -55,15 +51,15 @@ def get_modifier_subclasses():
 
 #TODO We need to do better?
 ALL_GENERIC_MECHANISM_SUBCLASSES = TabDict([
+('ConvenienceInhibited', make_convenience_with_inhibition),
 ('Convenience', make_convenience),
+('H1GeneralizedReversibleHillInhibited', make_generalized_reversible_hill_n_n_h1_with_inhibition),
 ('GeneralizedReversibleHill', make_generalized_reversible_hill_n_n),
 ('H1GeneralizedReversibleHill',make_generalized_reversible_hill_n_n_h1),
 ('IrrevMichaelisMenten', make_irrev_m_n_michaelis_menten),
 ('IrrevHillNM', make_irrev_m_n_hill),
 ('IrrevMassaction', make_irrev_massaction),
 ('RevMassaction', make_rev_massaction),
-('ConvenienceInhibited', make_convenience_with_inhibition),
-('H1GeneralizedReversibleHillInhibited', make_generalized_reversible_hill_n_n_h1_with_inhibition),
 ])
 
 FIELDS_TO_SERIALIZE = [

@@ -108,9 +108,6 @@ def make_mca_functions(kinetic_model,parameter_list,sim_type, mca_type=NET):
     flatten_list = lambda this_list: [item for sublist in this_list \
                                       for item in sublist]
 
-    all_rates = flatten_list([these_expressions.keys()
-                              for these_expressions in all_expr])
-
     # Sort into an ordered list
     all_parameters = flatten_list(all_parameters)
     all_parameters = list(set(all_parameters))

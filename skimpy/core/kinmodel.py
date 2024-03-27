@@ -40,7 +40,7 @@ from .solution import ODESolution
 from ..utils import TabDict, iterable_to_tabdict
 from ..utils.namespace import *
 
-from multiprocessing import Pool
+from multiprocess import Pool
 
 class KineticModel(object):
     """
