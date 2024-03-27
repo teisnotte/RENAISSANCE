@@ -1,20 +1,22 @@
 from __future__ import print_function
 import numpy as np
-import multiprocess as mp
+import multiprocessing as mp
 import pickle
 import time
 np.random.seed(0)
 
-def parallel_process(arg):
+
+def worker_process(arg):
     get_reward_func, weights = arg
     return get_reward_func(weights)
 
+
 class EvolutionStrategy(object):
-    def __init__(self, weights, reward_function,  savepath, population_size=50, sigma=0.1,
+    def __init__(self, weights, get_reward_func, savepath, population_size=50, sigma=0.1,
                  learning_rate=0.03, decay=0.999, num_threads=1):
 
         self.weights = weights
-        self.get_reward = reward_function
+        self.get_reward = get_reward_func
         self.save_path = savepath
         self.POPULATION_SIZE = population_size
         self.SIGMA = sigma
@@ -28,7 +30,10 @@ class EvolutionStrategy(object):
             jittered = self.SIGMA * i
             weights_try.append(w[index] + jittered)
         return weights_try
-    
+
+    def get_weights(self):
+        return self.weights
+
     def _get_population(self):
         """Get the population for the genetic algorithm."""
         population = []
@@ -52,7 +57,7 @@ class EvolutionStrategy(object):
         """
         if pool is not None:
             worker_args = ((self.get_reward, self._get_weights_try(self.weights, p)) for p in population)
-            rewards = pool.map(parallel_process, worker_args)
+            rewards = pool.map(worker_process, worker_args)
 
         else:
             rewards = []
@@ -61,7 +66,6 @@ class EvolutionStrategy(object):
                 rewards.append(self.get_reward(weights_try))
         rewards = np.array(rewards)
         return rewards
-
 
     def _update_weights(self, rewards, population):
         """
@@ -99,9 +103,7 @@ class EvolutionStrategy(object):
         print('starting')
         start = time.time()
         all_rewards = []
-        all_weights =[]
-        all_valid_model = []
-        all_sim_data = []
+
         for iteration in range(iterations):
 
             population = self._get_population()
@@ -111,12 +113,10 @@ class EvolutionStrategy(object):
             self._update_weights(rewards, population)
 
             this_reward = self.get_reward(self.weights)
+
             #save weights
             with open(f'{self.save_path}/weights_{iteration}.pkl', 'wb') as f:
                     pickle.dump(self.weights, f)
-
-            # weights update
-            all_weights.append(self.weights)
 
             if (iteration + 1) % print_step == 0:
                 print('********iter %d. reward: %f********' % (iteration + 1, this_reward ))
@@ -127,4 +127,4 @@ class EvolutionStrategy(object):
             pool.close()
             pool.join()
 
-        return np.array(all_rewards), all_weights
+        return np.array(all_rewards)
