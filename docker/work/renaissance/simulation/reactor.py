@@ -1,19 +1,9 @@
 import numpy as np
-import pickle
-
+import matplotlib as plt
 import pandas as pd
 import time
-from pytfa.io.json import load_json_model
 from pytfa.optim.constraints import *
 
-from skimpy.io.yaml import load_yaml_model
-from skimpy.io.regulation import load_enzyme_regulation
-from skimpy.analysis.oracle.load_pytfa_solution import load_fluxes, load_concentrations, load_equilibrium_constants
-from skimpy.core.parameters import load_parameter_population
-from skimpy.core.solution import ODESolutionPopulation
-from skimpy.utils.tabdict import TabDict
-from skimpy.utils.namespace import NET, QSSA
-from skimpy.simulations.reactor import make_batch_reactor
 import time
 
 def simulate_bioreactor(parameter_set, 
@@ -21,10 +11,10 @@ def simulate_bioreactor(parameter_set,
                           kinetic_model, 
                           concentrations, 
                           reactor,
-                          reactor_volume=50e-6,
-                          max_time=60,
-                          total_time=60,
-                          steps=1000):
+                          reactor_volume,
+                          max_time,
+                          total_time,
+                          steps):
     """
     Run the simulation for a given parameter set on a given kinetic model
     """
@@ -40,7 +30,6 @@ def simulate_bioreactor(parameter_set,
     reactor = reset_reactor(reactor, parameter_set, steady_state_sample, concentrations, reactor_volume)
 
     start = time.time()
-    print("Starting Simulation")
     if hasattr(reactor, 'solver'):
         delattr(reactor, 'solver')
 
@@ -52,7 +41,7 @@ def simulate_bioreactor(parameter_set,
         curr_t = time.time()
         if (curr_t - t_0) >= t_max:
             g[0] = 0
-            print('Did not converge in time')
+            # print('Did not converge in time')
         else:
             g[0] = 1
 
@@ -71,11 +60,11 @@ def simulate_bioreactor(parameter_set,
         nr_rootfns=1,
         user_data=user_data)
     end = time.time()
-    print("Compelted in {:.2f} seconds\n-----------------".format(end - start))
+    print("Compelted in {:.2f} seconds".format(end - start))
 
     final_biomass = sol_ode_wildtype.concentrations.iloc[-1]['biomass_strain_1'] * 0.28e-12 / 0.05
-    final_anthranilate = sol_ode_wildtype.concentrations.iloc[-1]['anth_e'] * 1e-6 * 136.13
-    final_glucose = sol_ode_wildtype.concentrations.iloc[-1]['glc_D_e'] * 1e-6 * 180.156
+    final_anthranilate = sol_ode_wildtype.concentrations.iloc[-1]['anth_e'] * 1e-9 * 136.13
+    final_glucose = sol_ode_wildtype.concentrations.iloc[-1]['glc_D_e'] * 1e-9 * 180.156
     print("Final biomass is : {}, final anthranilate is : {}, final glucose is : {}".format(final_biomass,
                                                                                                 final_anthranilate,
                                                                                                 final_glucose))

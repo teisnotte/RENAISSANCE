@@ -38,7 +38,7 @@ from skimpy.core.parameters import ParameterValues,ParameterValuePopulation
 import pandas as pd
 import numpy as np
 
-import tools.helper as hp
+import renaissance.tools.helper as hp
 from skimpy.core.parameters import load_parameter_population
 
 #sys.path.append("..")

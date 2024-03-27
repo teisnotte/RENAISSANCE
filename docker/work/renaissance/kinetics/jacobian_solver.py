@@ -161,11 +161,9 @@ class check_jacobian():
                                         concentration_scaling=self.CONCENTRATION_SCALING,
                                         in_place=True)
 
-        sym_conc_dict = {Symbol(variable): value for variable, value in conc_series.items()}
-
         sampling_parameters = SimpleParameterSampler.Parameters(n_samples=1)
         sampler = SimpleParameterSampler(sampling_parameters)
-        sampler._compile_sampling_functions(self.kmodel, sym_conc_dict, [])
+        sampler._compile_sampling_functions(self.kmodel, conc_series)
         model_param = self.kmodel.parameters
 
         self.flux_series = fluxes
@@ -173,8 +171,22 @@ class check_jacobian():
         self.conc_dict = conc_series
         self.flux_dict = flux_series
         self.k_eq = k_eq
-        self.sym_conc_dict = sym_conc_dict
         self.model_param = model_param
+
+    def get_regulation_parameters(self):
+        k_names = []
+        k_regulation = []
+
+        for k, v in self.kmodel.parameters.items():
+            if k.startswith("km_") or "activator" in k or "inhibitor" in k or "activation" in k or "inhibition" in k:
+                if k not in k_names:
+                    k_names.append(k)
+                    
+                if "activator" in k or "inhibitor" in k or "activation" in k or "inhibition" in k:
+                    k_regulation.append(k)
+
+        print(f"The number of k for generation is {len(k_names)}, \nand the number of regulation parameters is {len(k_regulation)}.")
+        return k_names, k_regulation
 
     def _load_models(self,met_model,exp_id, ss_idx):
 
@@ -264,18 +276,15 @@ class check_jacobian():
         k_eq = load_equilibrium_constants(self.samples, self.tmodel, self.kmodel,
                                        concentration_scaling=self.CONCENTRATION_SCALING,
                                        in_place=True)
-        sym_conc_dict = {Symbol(k):v for k,v in conc_series.items()}
-
 
         sampling_parameters = SimpleParameterSampler.Parameters(n_samples=1)
         sampler = SimpleParameterSampler(sampling_parameters)
-        sampler._compile_sampling_functions(self.kmodel, sym_conc_dict,  [])
+        sampler._compile_sampling_functions(self.kmodel, conc_series)
         model_param = self.kmodel.parameters
 
         self.flux_series = fluxes
         self.conc_series = concentrations
         self.k_eq = k_eq
-        self.sym_conc_dict = sym_conc_dict
         self.model_param = model_param
 
     def _prepare_parameters(self, parameters, parameter_names, GAN = True):

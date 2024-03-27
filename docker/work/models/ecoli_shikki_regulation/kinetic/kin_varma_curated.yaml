@@ -87,7 +87,7 @@ dependent_reactants:
     compartment: c
     name: q8_c
 initial_conditions: {}
-name: Unnamed
+name: kin_varma_curated
 parameters:
   ac_e: null
   acald_e: null

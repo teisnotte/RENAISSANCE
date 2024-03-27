@@ -28,8 +28,6 @@ limitations under the License.
 from collections import defaultdict, OrderedDict
 import numpy as np
 
-import multiprocessing
-
 import math
 from fractions import Fraction
 import functools
